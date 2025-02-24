@@ -71,6 +71,24 @@ impl From<TenhouTile> for Tile {
     }
 }
 
+impl Tile {
+    pub fn from_tenhou0(pai: u8, aka_ari: bool) -> Self {
+        let tile_num = pai % 36 / 4;
+        let tile_suit = pai / 36;
+
+        // SAFETY: `n` will not goes out of range.
+        unsafe {
+            let mut tile = Self::new_unchecked(tile_num + 9 * tile_suit);
+
+            if aka_ari && tile_num == 4 && pai % 4 == 0 {
+                tile = tile.akaize();
+            }
+
+            tile
+        }
+    }
+}
+
 impl From<Tile> for TenhouTile {
     fn from(tile: Tile) -> Self {
         let n = tile.as_u8();

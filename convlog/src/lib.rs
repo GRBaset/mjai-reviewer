@@ -101,6 +101,7 @@ mod kyoku_filter;
 mod macros;
 mod mjai;
 mod tile;
+mod xml_conv;
 
 pub mod tenhou;
 
@@ -109,3 +110,4 @@ pub use conv::tenhou_to_mjai;
 pub use kyoku_filter::KyokuFilter;
 pub use mjai::Event;
 pub use tile::{Tile, tile_set_eq};
+pub use xml_conv::tenhou_xml_to_mjai;
