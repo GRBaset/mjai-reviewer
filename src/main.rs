@@ -109,7 +109,7 @@ use crate::render::View;
 use crate::review::{Review, akochan, mortal};
 use chrono::SubsecRound;
 use convlog::tenhou::{GameLength, Log, RawLog};
-use convlog::tenhou_to_mjai;
+use convlog::{Event, t, tenhou_to_mjai};
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
@@ -308,7 +308,7 @@ fn main() -> Result<()> {
     // convert from tenhou::Log to Vec<mjai::Event>
     let begin_convert_log = chrono::Local::now();
     log!("converting to mjai events...");
-    let events =
+    let raw_events =
         tenhou_to_mjai(&log).context("failed to convert tenhou.net/6 log into mjai format")?;
 
     if let Some(mjai_out) = mjai_out {
@@ -321,7 +321,7 @@ fn main() -> Result<()> {
             Box::from(mjai_out_file)
         };
 
-        for event in &events {
+        for event in &raw_events {
             let to_write = json::to_string(event).context("failed to serialize")?;
             writeln!(w, "{to_write}").with_context(|| {
                 format!("failed to write to mjai out file {}", mjai_out.display())
@@ -336,8 +336,38 @@ fn main() -> Result<()> {
     // present.
     let engine = engine.unwrap();
 
-    if engine == Engine::Mortal && log.game_length != GameLength::Hanchan {
-        bail!("Mortal supports hanchan games only");
+    let mut events: Vec<Event> = Vec::new();
+    if engine == Engine::Mortal && log.game_length == GameLength::Tonpuu {
+        for event in raw_events {
+            let new_event = if let Event::StartKyoku {
+                bakaze: _,
+                dora_marker,
+                kyoku,
+                honba,
+                kyotaku,
+                oya,
+                scores,
+                tehais,
+            } = event
+            {
+                Event::StartKyoku {
+                    bakaze: t!(S),
+                    dora_marker,
+                    kyoku,
+                    honba,
+                    kyotaku,
+                    oya,
+                    scores,
+                    tehais,
+                }
+            } else {
+                event
+            };
+
+            events.push(new_event);
+        }
+    } else {
+        events = raw_events;
     }
 
     // get player id
