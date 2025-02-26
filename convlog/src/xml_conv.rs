@@ -15,7 +15,7 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ConvertError {
-    #[error("Type {0:?} not implemented")]
+    #[error("Type {0:?} not implemented (sanma not supported)")]
     TypeNotImplemented(u8),
     #[error("XML parsing error: {0:?}")]
     XMLParseError(quick_xml::Error),
@@ -111,11 +111,13 @@ pub fn tenhou_xml_to_mjai(xml: &str) -> Result<Vec<Event>> {
                 match owned_e.name().as_ref() {
                     b"GO" => {
                         let go = Go::deserialize(&mut deser)?;
-                        if go.game_type & 0b11001 != 0b01001 {
+
+                        // Check it's 4-player
+                        if go.game_type & 0b10000 != 0b010000 {
                             return Err(ConvertError::TypeNotImplemented(go.game_type));
                         }
 
-                        aka_ari = go.game_type & 0b110 == 0;
+                        aka_ari = go.game_type & 0b10 == 0;
                     }
 
                     b"UN" => {

@@ -35,3 +35,8 @@ members = [
 debug = 1
 lto = true
 codegen-units = 1
+
+[profile.dev]
+opt-level = 0
+[profile.dev.package."*"]
+opt-level = 3
