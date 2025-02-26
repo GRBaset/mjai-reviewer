@@ -3,12 +3,11 @@ use std::num::ParseIntError;
 use lazy_static::lazy_static;
 
 use crate::{
-    t,
+    Event, Tile, t,
     tenhou::xml_scheme::{Agari, Dora, Go, Init, Meld, MeldEvent, Reach, Ryuukyoku, TileList, Un},
-    Event, Tile,
 };
 
-use quick_xml::{de::Deserializer, events::Event as XMLEvent, Reader};
+use quick_xml::{Reader, de::Deserializer, events::Event as XMLEvent};
 use regex::Regex;
 use serde::Deserialize;
 use thiserror::Error;
@@ -113,7 +112,7 @@ pub fn tenhou_xml_to_mjai(xml: &str) -> Result<Vec<Event>> {
                         let go = Go::deserialize(&mut deser)?;
 
                         // Check it's 4-player
-                        if go.game_type & 0b10000 != 0b010000 {
+                        if go.game_type & 0b10000 != 0 {
                             return Err(ConvertError::TypeNotImplemented(go.game_type));
                         }
 
