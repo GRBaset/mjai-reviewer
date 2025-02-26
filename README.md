@@ -1,4 +1,4 @@
-# mjai-reviewer
+# mjai-reviewer (added XML log conversion, see convlog folder)
 
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/Equim-chan/mjai-reviewer/build.yml)](https://github.com/Equim-chan/mjai-reviewer/actions)
 [![dependency status](https://deps.rs/repo/github/Equim-chan/mjai-reviewer/status.svg)](https://deps.rs/repo/github/Equim-chan/mjai-reviewer)
