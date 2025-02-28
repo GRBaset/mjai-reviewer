@@ -107,6 +107,18 @@ impl Tile {
 
     #[inline]
     #[must_use]
+    pub const fn exchange_bakaze(self, bakaze: Self) -> Self {
+        if self.0 == bakaze.0 {
+            self.next()
+        } else if self.0 == bakaze.0 + 1 {
+            self.prev()
+        } else {
+            self
+        }
+    }
+
+    #[inline]
+    #[must_use]
     pub const fn next(self) -> Self {
         if self.is_unknown() {
             return self;

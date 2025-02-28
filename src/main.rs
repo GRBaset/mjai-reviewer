@@ -338,20 +338,12 @@ fn main() -> Result<()> {
 
     let mut events: Vec<Event> = Vec::new();
     if engine == Engine::Mortal && log.game_length == GameLength::Tonpuu {
+        let mut kyoku_bakaze = t!(E);
+
         for event in raw_events {
-            let new_event = if let Event::StartKyoku {
-                bakaze: _,
-                dora_marker,
-                kyoku,
-                honba,
-                kyotaku,
-                oya,
-                scores,
-                tehais,
-            } = event
-            {
+            let new_event = match event {
                 Event::StartKyoku {
-                    bakaze: t!(S),
+                    bakaze,
                     dora_marker,
                     kyoku,
                     honba,
@@ -359,9 +351,111 @@ fn main() -> Result<()> {
                     oya,
                     scores,
                     tehais,
+                } => {
+                    kyoku_bakaze = bakaze;
+                    let new_tehais =
+                        tehais.map(|tehai| tehai.map(|pai| pai.exchange_bakaze(bakaze)));
+
+                    Event::StartKyoku {
+                        bakaze: bakaze.next(),
+                        dora_marker,
+                        kyoku,
+                        honba,
+                        kyotaku,
+                        oya,
+                        scores,
+                        tehais: new_tehais,
+                    }
                 }
-            } else {
-                event
+
+                Event::Tsumo { actor, pai } => Event::Tsumo {
+                    actor,
+                    pai: pai.exchange_bakaze(kyoku_bakaze),
+                },
+
+                Event::Dahai {
+                    actor,
+                    pai,
+                    tsumogiri,
+                } => Event::Dahai {
+                    actor,
+                    pai: pai.exchange_bakaze(kyoku_bakaze),
+                    tsumogiri,
+                },
+
+                Event::Chi {
+                    actor,
+                    target,
+                    pai,
+                    consumed,
+                } => Event::Chi {
+                    actor,
+                    target,
+                    pai: pai.exchange_bakaze(kyoku_bakaze),
+                    consumed: consumed.map(|pai| pai.exchange_bakaze(kyoku_bakaze)),
+                },
+
+                Event::Pon {
+                    actor,
+                    target,
+                    pai,
+                    consumed,
+                } => Event::Pon {
+                    actor,
+                    target,
+                    pai: pai.exchange_bakaze(kyoku_bakaze),
+                    consumed: consumed.map(|pai| pai.exchange_bakaze(kyoku_bakaze)),
+                },
+
+                Event::Daiminkan {
+                    actor,
+                    target,
+                    pai,
+                    consumed,
+                } => Event::Daiminkan {
+                    actor,
+                    target,
+                    pai: pai.exchange_bakaze(kyoku_bakaze),
+                    consumed: consumed.map(|pai| pai.exchange_bakaze(kyoku_bakaze)),
+                },
+
+                Event::Kakan {
+                    actor,
+                    pai,
+                    consumed,
+                } => Event::Kakan {
+                    actor,
+                    pai: pai.exchange_bakaze(kyoku_bakaze),
+                    consumed: consumed.map(|pai| pai.exchange_bakaze(kyoku_bakaze)),
+                },
+
+                Event::Ankan { actor, consumed } => Event::Ankan {
+                    actor,
+                    consumed: consumed.map(|pai| pai.exchange_bakaze(kyoku_bakaze)),
+                },
+
+                Event::Dora { dora_marker } => Event::Dora {
+                    dora_marker: dora_marker.exchange_bakaze(kyoku_bakaze),
+                },
+
+                Event::Hora {
+                    actor,
+                    target,
+                    deltas,
+                    ura_markers,
+                } => Event::Hora {
+                    actor,
+                    target,
+                    deltas,
+                    ura_markers: ura_markers.map(|markers| {
+                        markers
+                            .iter()
+                            .map(|pai| pai.exchange_bakaze(kyoku_bakaze))
+                            .collect()
+                    }),
+                },
+
+                _ => event,
             };
 
             events.push(new_event);

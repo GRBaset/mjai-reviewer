@@ -5,4 +5,5 @@ Cargo.lock
 .vscode/
 
 *.html
+*.mjai.json
 .DS_Store
