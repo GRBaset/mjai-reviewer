@@ -95,4 +95,15 @@ impl Tehai {
     pub fn view(&self) -> &[Tile] {
         &self.inner
     }
+
+    pub fn exchange_bakaze(self, bakaze: Tile) -> Self {
+        Self {
+            inner: self
+                .inner
+                .iter()
+                .map(|pai| pai.exchange_bakaze(bakaze))
+                .collect(),
+            is_sorted: self.is_sorted,
+        }
+    }
 }

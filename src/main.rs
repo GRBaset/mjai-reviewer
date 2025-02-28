@@ -109,7 +109,7 @@ use crate::render::View;
 use crate::review::{Review, akochan, mortal};
 use chrono::SubsecRound;
 use convlog::tenhou::{GameLength, Log, RawLog};
-use convlog::{Event, t, tenhou_to_mjai};
+use convlog::{Event, t, tenhou_to_mjai, tu8};
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
@@ -149,6 +149,7 @@ fn main() -> Result<()> {
         no_review,
         verbose,
         engine,
+        as_hanchan,
         input_opts:
             InputOptions {
                 in_file,
@@ -337,126 +338,15 @@ fn main() -> Result<()> {
     let engine = engine.unwrap();
 
     let mut events: Vec<Event> = Vec::new();
-    if engine == Engine::Mortal && log.game_length == GameLength::Tonpuu {
+    if engine == Engine::Mortal && log.game_length == GameLength::Tonpuu && !as_hanchan {
         let mut kyoku_bakaze = t!(E);
 
         for event in raw_events {
-            let new_event = match event {
-                Event::StartKyoku {
-                    bakaze,
-                    dora_marker,
-                    kyoku,
-                    honba,
-                    kyotaku,
-                    oya,
-                    scores,
-                    tehais,
-                } => {
-                    kyoku_bakaze = bakaze;
-                    let new_tehais =
-                        tehais.map(|tehai| tehai.map(|pai| pai.exchange_bakaze(bakaze)));
+            if let Event::StartKyoku { bakaze, .. } = event {
+                kyoku_bakaze = bakaze;
+            }
 
-                    Event::StartKyoku {
-                        bakaze: bakaze.next(),
-                        dora_marker,
-                        kyoku,
-                        honba,
-                        kyotaku,
-                        oya,
-                        scores,
-                        tehais: new_tehais,
-                    }
-                }
-
-                Event::Tsumo { actor, pai } => Event::Tsumo {
-                    actor,
-                    pai: pai.exchange_bakaze(kyoku_bakaze),
-                },
-
-                Event::Dahai {
-                    actor,
-                    pai,
-                    tsumogiri,
-                } => Event::Dahai {
-                    actor,
-                    pai: pai.exchange_bakaze(kyoku_bakaze),
-                    tsumogiri,
-                },
-
-                Event::Chi {
-                    actor,
-                    target,
-                    pai,
-                    consumed,
-                } => Event::Chi {
-                    actor,
-                    target,
-                    pai: pai.exchange_bakaze(kyoku_bakaze),
-                    consumed: consumed.map(|pai| pai.exchange_bakaze(kyoku_bakaze)),
-                },
-
-                Event::Pon {
-                    actor,
-                    target,
-                    pai,
-                    consumed,
-                } => Event::Pon {
-                    actor,
-                    target,
-                    pai: pai.exchange_bakaze(kyoku_bakaze),
-                    consumed: consumed.map(|pai| pai.exchange_bakaze(kyoku_bakaze)),
-                },
-
-                Event::Daiminkan {
-                    actor,
-                    target,
-                    pai,
-                    consumed,
-                } => Event::Daiminkan {
-                    actor,
-                    target,
-                    pai: pai.exchange_bakaze(kyoku_bakaze),
-                    consumed: consumed.map(|pai| pai.exchange_bakaze(kyoku_bakaze)),
-                },
-
-                Event::Kakan {
-                    actor,
-                    pai,
-                    consumed,
-                } => Event::Kakan {
-                    actor,
-                    pai: pai.exchange_bakaze(kyoku_bakaze),
-                    consumed: consumed.map(|pai| pai.exchange_bakaze(kyoku_bakaze)),
-                },
-
-                Event::Ankan { actor, consumed } => Event::Ankan {
-                    actor,
-                    consumed: consumed.map(|pai| pai.exchange_bakaze(kyoku_bakaze)),
-                },
-
-                Event::Dora { dora_marker } => Event::Dora {
-                    dora_marker: dora_marker.exchange_bakaze(kyoku_bakaze),
-                },
-
-                Event::Hora {
-                    actor,
-                    target,
-                    deltas,
-                    ura_markers,
-                } => Event::Hora {
-                    actor,
-                    target,
-                    deltas,
-                    ura_markers: ura_markers.map(|markers| {
-                        markers
-                            .iter()
-                            .map(|pai| pai.exchange_bakaze(kyoku_bakaze))
-                            .collect()
-                    }),
-                },
-
-                _ => event,
-            };
+            let new_event = event.exchange_bakaze(kyoku_bakaze);
 
             events.push(new_event);
         }
@@ -470,7 +360,7 @@ fn main() -> Result<()> {
     log!("target: {} ({player_id})", log.names[player_id as usize]);
 
     let begin_review = chrono::Local::now();
-    let review = match engine {
+    let raw_review = match engine {
         Engine::Mortal => {
             let mortal_exe = canonicalize!(mortal_exe)?;
             let mortal_cfg = canonicalize!(mortal_cfg)?;
@@ -504,6 +394,47 @@ fn main() -> Result<()> {
             let result = reviewer.review().context("failed to review")?;
             Review::Akochan(result)
         }
+    };
+
+    let review = if log.game_length == GameLength::Tonpuu && !as_hanchan {
+        if let Review::Mortal(mortal_review) = raw_review {
+            let mut new_kyokus = Vec::new();
+
+            for kyoku in mortal_review.kyokus {
+                let new_kyoku = kyoku.kyoku - 4;
+                let kyoku_bakaze = (tu8!(E) + new_kyoku / 4).try_into()?;
+                let mut new_entries = Vec::new();
+                dbg!(kyoku_bakaze);
+
+                for entry in kyoku.entries {
+                    let new_entry = entry.exchange_bakaze(kyoku_bakaze);
+
+                    new_entries.push(new_entry);
+                }
+
+                new_kyokus.push(mortal::KyokuReview {
+                    kyoku: new_kyoku,
+                    honba: kyoku.honba,
+                    end_status: kyoku.end_status,
+                    relative_scores: kyoku.relative_scores,
+                    entries: new_entries,
+                });
+            }
+
+            Review::Mortal(mortal::Review {
+                total_reviewed: mortal_review.total_reviewed,
+                total_matches: mortal_review.total_matches,
+                rating: mortal_review.rating,
+                temperature: mortal_review.temperature,
+                kyokus: new_kyokus,
+                relative_phi_matrix: mortal_review.relative_phi_matrix,
+                model_tag: mortal_review.model_tag,
+            })
+        } else {
+            raw_review
+        }
+    } else {
+        raw_review
     };
 
     // determine output file

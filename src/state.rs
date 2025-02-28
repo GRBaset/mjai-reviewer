@@ -169,6 +169,66 @@ impl State {
     pub const fn player_id(&self) -> u8 {
         self.actor
     }
+
+    pub fn exchange_bakaze(self, bakaze: Tile) -> Self {
+        let new_fuuros = self
+            .fuuros
+            .iter()
+            .map(|fuuro| match *fuuro {
+                Fuuro::Chi {
+                    target,
+                    pai,
+                    consumed,
+                } => Fuuro::Chi {
+                    target,
+                    pai: pai.exchange_bakaze(bakaze),
+                    consumed: consumed.map(|pai| pai.exchange_bakaze(bakaze)),
+                },
+
+                Fuuro::Pon {
+                    target,
+                    pai,
+                    consumed,
+                } => Fuuro::Pon {
+                    target,
+                    pai: pai.exchange_bakaze(bakaze),
+                    consumed: consumed.map(|pai| pai.exchange_bakaze(bakaze)),
+                },
+
+                Fuuro::Daiminkan {
+                    target,
+                    pai,
+                    consumed,
+                } => Fuuro::Daiminkan {
+                    target,
+                    pai: pai.exchange_bakaze(bakaze),
+                    consumed: consumed.map(|pai| pai.exchange_bakaze(bakaze)),
+                },
+
+                Fuuro::Kakan {
+                    pai,
+                    previous_pon_target,
+                    previous_pon_pai,
+                    consumed,
+                } => Fuuro::Kakan {
+                    pai: pai.exchange_bakaze(bakaze),
+                    previous_pon_target,
+                    previous_pon_pai,
+                    consumed: consumed.map(|pai| pai.exchange_bakaze(bakaze)),
+                },
+
+                Fuuro::Ankan { consumed } => Fuuro::Ankan {
+                    consumed: consumed.map(|pai| pai.exchange_bakaze(bakaze)),
+                },
+            })
+            .collect();
+
+        Self {
+            actor: self.actor,
+            tehai: self.tehai.exchange_bakaze(bakaze),
+            fuuros: new_fuuros,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]

@@ -52,6 +52,10 @@ pub struct Options {
     #[clap(short, long)]
     pub verbose: bool,
 
+    /// Review log as part of a hanchan (instead of tonpuu).
+    #[clap(long)]
+    pub as_hanchan: bool,
+
     /// The engine to use for review.
     #[clap(
         short,

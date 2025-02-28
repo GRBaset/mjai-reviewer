@@ -94,6 +94,123 @@ pub enum Event {
 }
 
 impl Event {
+    pub fn exchange_bakaze(self, kyoku_bakaze: Tile) -> Self {
+        match self {
+            Event::StartKyoku {
+                bakaze,
+                dora_marker,
+                kyoku,
+                honba,
+                kyotaku,
+                oya,
+                scores,
+                tehais,
+            } => {
+                let new_tehais = tehais.map(|tehai| tehai.map(|pai| pai.exchange_bakaze(bakaze)));
+
+                Event::StartKyoku {
+                    bakaze: bakaze.next(),
+                    dora_marker,
+                    kyoku,
+                    honba,
+                    kyotaku,
+                    oya,
+                    scores,
+                    tehais: new_tehais,
+                }
+            }
+
+            Event::Tsumo { actor, pai } => Event::Tsumo {
+                actor,
+                pai: pai.exchange_bakaze(kyoku_bakaze),
+            },
+
+            Event::Dahai {
+                actor,
+                pai,
+                tsumogiri,
+            } => Event::Dahai {
+                actor,
+                pai: pai.exchange_bakaze(kyoku_bakaze),
+                tsumogiri,
+            },
+
+            Event::Chi {
+                actor,
+                target,
+                pai,
+                consumed,
+            } => Event::Chi {
+                actor,
+                target,
+                pai: pai.exchange_bakaze(kyoku_bakaze),
+                consumed: consumed.map(|pai| pai.exchange_bakaze(kyoku_bakaze)),
+            },
+
+            Event::Pon {
+                actor,
+                target,
+                pai,
+                consumed,
+            } => Event::Pon {
+                actor,
+                target,
+                pai: pai.exchange_bakaze(kyoku_bakaze),
+                consumed: consumed.map(|pai| pai.exchange_bakaze(kyoku_bakaze)),
+            },
+
+            Event::Daiminkan {
+                actor,
+                target,
+                pai,
+                consumed,
+            } => Event::Daiminkan {
+                actor,
+                target,
+                pai: pai.exchange_bakaze(kyoku_bakaze),
+                consumed: consumed.map(|pai| pai.exchange_bakaze(kyoku_bakaze)),
+            },
+
+            Event::Kakan {
+                actor,
+                pai,
+                consumed,
+            } => Event::Kakan {
+                actor,
+                pai: pai.exchange_bakaze(kyoku_bakaze),
+                consumed: consumed.map(|pai| pai.exchange_bakaze(kyoku_bakaze)),
+            },
+
+            Event::Ankan { actor, consumed } => Event::Ankan {
+                actor,
+                consumed: consumed.map(|pai| pai.exchange_bakaze(kyoku_bakaze)),
+            },
+
+            Event::Dora { dora_marker } => Event::Dora {
+                dora_marker: dora_marker.exchange_bakaze(kyoku_bakaze),
+            },
+
+            Event::Hora {
+                actor,
+                target,
+                deltas,
+                ura_markers,
+            } => Event::Hora {
+                actor,
+                target,
+                deltas,
+                ura_markers: ura_markers.map(|markers| {
+                    markers
+                        .iter()
+                        .map(|pai| pai.exchange_bakaze(kyoku_bakaze))
+                        .collect()
+                }),
+            },
+
+            _ => self,
+        }
+    }
+
     #[inline]
     #[must_use]
     pub const fn actor(&self) -> Option<u8> {

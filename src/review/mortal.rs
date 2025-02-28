@@ -60,6 +60,39 @@ pub struct Entry {
     actual_index: usize,
 }
 
+impl Entry {
+    pub fn exchange_bakaze(self, bakaze: Tile) -> Self {
+        let new_details = self
+            .details
+            .iter()
+            .map(|detail| Detail {
+                action: detail.action.clone().exchange_bakaze(bakaze),
+                q_value: detail.q_value,
+                prob: detail.prob,
+                label: detail.label,
+            })
+            .collect();
+        
+        Self {
+            junme: self.junme,
+            tiles_left: self.tiles_left,
+            last_actor: self.last_actor,
+            tile: self.tile.exchange_bakaze(bakaze),
+            state: self.state.exchange_bakaze(bakaze),
+            at_self_chi_pon: self.at_self_chi_pon,
+            at_self_riichi: self.at_self_riichi,
+            at_opponent_kakan: self.at_opponent_kakan,
+            expected: self.expected.exchange_bakaze(bakaze),
+            actual: self.actual.exchange_bakaze(bakaze),
+            is_equal: self.is_equal,
+            details: new_details,
+            shanten: self.shanten,
+            at_furiten: self.at_furiten,
+            actual_index: self.actual_index,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 struct Detail {
     action: Event,
